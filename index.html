@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0d">
+<title>Sıçrama Takvim</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#0b0b0d;--card:#151518;--line:#26262b;--fg:#f2f2f4;--mut:#9a9aa3;--merak:#f5a524;--tahmin:#38bdf8;--ya:#c084fc;--acc:#ff7a3d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;padding:env(safe-area-inset-top) max(14px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(14px,env(safe-area-inset-left))}
+.wrap{max-width:1000px;margin:0 auto;padding:16px 0 40px}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+header img{width:40px;height:40px;border-radius:50%}
+h1{font-size:20px;margin:0}
+.sub{color:var(--mut);font-size:13px}
+.sp{flex:1}
+button{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font:inherit;cursor:pointer}
+button.on{background:var(--acc);border-color:var(--acc);color:#111;font-weight:600}
+.bar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.bar h2{margin:0 8px;font-size:18px;min-width:130px;text-align:center}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.dow{background:var(--card);padding:6px;text-align:center;color:var(--mut);font-size:12px}
+.day{background:var(--bg);min-height:104px;padding:5px;display:flex;flex-direction:column;gap:3px}
+.day.out{opacity:.35}
+.day .n{font-size:12px;color:var(--mut)}
+.day.today .n{background:var(--acc);color:#111;border-radius:50%;width:20px;height:20px;display:grid;place-items:center;font-weight:700}
+.chip{display:block;width:100%;text-align:left;border:0;border-radius:6px;padding:2px 5px;font-size:11px;background:var(--card);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid var(--c)}
+.chip b{color:var(--c);font-weight:600;margin-right:4px}
+.chip.done{opacity:.55}
+.leg{display:flex;gap:14px;margin:12px 0;color:var(--mut);font-size:13px;flex-wrap:wrap}
+.leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--c)}
+.list{display:none}
+.item{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.item .t{font-weight:600}
+.item .m{color:var(--mut);font-size:12.5px;margin-bottom:2px}
+.dh{margin:18px 0 6px;color:var(--mut);font-size:13px;text-transform:uppercase;letter-spacing:.05em}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:flex-end;justify-content:center;z-index:5}
+.modal.open{display:flex}
+.sheet{background:var(--card);border:1px solid var(--line);border-radius:16px 16px 0 0;width:min(560px,100%);max-height:85vh;overflow:auto;padding:18px 18px calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:700px){.modal{align-items:center}.sheet{border-radius:16px}}
+.sheet h3{margin:0 0 4px;font-size:17px}
+pre{white-space:pre-wrap;word-break:break-word;font:inherit;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;margin:12px 0}
+.row{display:flex;gap:8px}
+@media(max-width:640px){
+  .grid{display:none}.list{display:block}
+  .vtog{display:none}
+}
+body.liste .grid{display:none}body.liste .list{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="icon-192.png" alt="">
+    <div><h1>Sıçrama Takvim</h1><div class="sub" id="sub">merak.kutusu_ • Meta Planlayıcı ile aynı plan</div></div>
+    <span class="sp"></span>
+    <span class="vtog"><button id="vg" class="on">Takvim</button> <button id="vl">Liste</button></span>
+  </header>
+  <div class="bar">
+    <button id="prev">‹</button><h2 id="ay"></h2><button id="next">›</button><button id="bugun">Bugün</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="list" id="list"></div>
+  <div class="leg">
+    <span style="--c:var(--merak)"><i></i>Merak Kutusu 12:30</span>
+    <span style="--c:var(--tahmin)"><i></i>Tahmin Et! 18:00</span>
+    <span style="--c:var(--ya)"><i></i>Ya … olsaydı? 21:00</span>
+  </div>
+</div>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<script>
+const ADLAR={merak:"Merak Kutusu",tahmin:"Tahmin Et!",ya:"Ya … olsaydı?"};
+const AYLAR=["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const GUN=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
+const $=s=>document.querySelector(s);
+let items=[],cur=new Date();cur.setDate(1);
+const dt=i=>new Date(i.date+"T"+i.time+":00+03:00");
+const done=i=>dt(i)<new Date();
+const pad=n=>String(n).padStart(2,"0");
+const key=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+function chip(i){return `<button class="chip ${done(i)?"done":""}" style="--c:var(--${i.series})" data-k="${items.indexOf(i)}"><b>${i.time}</b>${esc(short(i.title))}</button>`}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const short=t=>t.replace(/^TAHMİN ET! /,"");
+function render(){
+  $("#ay").textContent=AYLAR[cur.getMonth()]+" "+cur.getFullYear();
+  const first=new Date(cur.getFullYear(),cur.getMonth(),1),off=(first.getDay()+6)%7;
+  const start=new Date(first);start.setDate(1-off);
+  const today=key(new Date());let h=GUN.map(g=>`<div class="dow">${g}</div>`).join("");
+  for(let n=0;n<42;n++){const d=new Date(start);d.setDate(start.getDate()+n);if(n>=35&&d.getMonth()!==cur.getMonth())break;
+    const k=key(d),di=items.filter(i=>i.date===k);
+    h+=`<div class="day ${d.getMonth()!==cur.getMonth()?"out":""} ${k===today?"today":""}"><span class="n">${d.getDate()}</span>${di.map(chip).join("")}</div>`}
+  $("#grid").innerHTML=h;
+  const ay=items.filter(i=>{const d=new Date(i.date);return d.getMonth()===cur.getMonth()&&d.getFullYear()===cur.getFullYear()});
+  let l="",last="";
+  for(const i of ay){if(i.date!==last){last=i.date;const d=new Date(i.date+"T12:00:00");l+=`<div class="dh">${d.getDate()} ${AYLAR[d.getMonth()]} ${GUN[(d.getDay()+6)%7]}</div>`}
+    l+=`<div class="item" style="--c:var(--${i.series})" data-k="${items.indexOf(i)}"><div class="m">${i.time} • ${ADLAR[i.series]} • ${done(i)?"Yayında":"Planlı"}</div><div class="t">${esc(i.title)}</div></div>`}
+  $("#list").innerHTML=l||'<div class="sub">Bu ay için planlı gönderi yok.</div>';
+}
+function ac(k){const i=items[k];
+  $("#sheet").innerHTML=`<div class="sub" style="color:var(--${i.series})">${ADLAR[i.series]} • ${i.date.split("-").reverse().join(".")} ${i.time} • ${done(i)?"Yayında":"Planlı"}</div><h3>${esc(i.title)}</h3>${i.caption?`<pre id="cp">${esc(i.caption)}</pre>`:'<div class="sub" style="margin:12px 0">Açıklama kayıtlı değil.</div>'}<div class="row">${i.caption?'<button id="kop">Açıklamayı kopyala</button>':""}<button id="kapa">Kapat</button></div>`;
+  $("#modal").classList.add("open");
+  $("#kapa").onclick=()=>$("#modal").classList.remove("open");
+  const b=$("#kop");if(b)b.onclick=async()=>{try{await navigator.clipboard.writeText(i.caption);b.textContent="Kopyalandı"}catch{const r=document.createRange();r.selectNodeContents($("#cp"));getSelection().removeAllRanges();getSelection().addRange(r);b.textContent="Seçildi, kopyala"}}}
+document.addEventListener("click",e=>{const t=e.target.closest("[data-k]");if(t)ac(+t.dataset.k);if(e.target===$("#modal"))$("#modal").classList.remove("open")});
+$("#prev").onclick=()=>{cur.setMonth(cur.getMonth()-1);render()};
+$("#next").onclick=()=>{cur.setMonth(cur.getMonth()+1);render()};
+$("#bugun").onclick=()=>{cur=new Date();cur.setDate(1);render()};
+$("#vg").onclick=()=>{document.body.classList.remove("liste");$("#vg").classList.add("on");$("#vl").classList.remove("on")};
+$("#vl").onclick=()=>{document.body.classList.add("liste");$("#vl").classList.add("on");$("#vg").classList.remove("on")};
+fetch("plan.json?"+Date.now()).then(r=>r.json()).then(p=>{items=p.items;
+  const u=new Date(p.updated);$("#sub").textContent="merak.kutusu_ • Meta ile aynı plan • güncelleme: "+u.toLocaleDateString("tr-TR");
+  const ilk=items.map(dt).find(d=>d>new Date());if(ilk&&!items.some(i=>i.date.startsWith(key(new Date()).slice(0,7)))){cur=new Date(ilk);cur.setDate(1)}
+  render()}).catch(()=>{$("#list").style.display="block";$("#list").textContent="Plan yüklenemedi."});
+if("serviceWorker"in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
