@@ -31,6 +31,7 @@ button.on{background:var(--acc);border-color:var(--acc);color:#111;font-weight:6
 .chip{display:block;width:100%;text-align:left;border:0;border-radius:6px;padding:2px 5px;font-size:11px;background:var(--card);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:3px solid var(--c)}
 .chip b{color:var(--c);font-weight:600;margin-right:4px}
 .chip.done{opacity:.55}
+.chip.nometa{border-left-style:dashed;background:transparent;border:1px dashed var(--line);border-left:3px dashed var(--c)}
 .leg{display:flex;gap:14px;margin:12px 0;color:var(--mut);font-size:13px;flex-wrap:wrap}
 .leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;background:var(--c)}
 .list{display:none}
@@ -69,6 +70,7 @@ body.liste .grid{display:none}body.liste .list{display:block}
     <span style="--c:var(--merak)"><i></i>Merak Kutusu 12:30</span>
     <span style="--c:var(--tahmin)"><i></i>Tahmin Et! 18:00</span>
     <span style="--c:var(--ya)"><i></i>Ya … olsaydı? 21:00</span>
+    <span>┄ Kesikli çizgi: üretildi, Meta'ya henüz eklenmedi</span>
   </div>
 </div>
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
@@ -80,9 +82,10 @@ const $=s=>document.querySelector(s);
 let items=[],cur=new Date();cur.setDate(1);
 const dt=i=>new Date(i.date+"T"+i.time+":00+03:00");
 const done=i=>dt(i)<new Date();
+const dur=i=>done(i)?"Yayında":(i.meta?"Meta'da planlı":"Meta'ya henüz eklenmedi");
 const pad=n=>String(n).padStart(2,"0");
 const key=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
-function chip(i){return `<button class="chip ${done(i)?"done":""}" style="--c:var(--${i.series})" data-k="${items.indexOf(i)}"><b>${i.time}</b>${esc(short(i.title))}</button>`}
+function chip(i){return `<button class="chip ${done(i)?"done":""} ${i.meta?"":"nometa"}" style="--c:var(--${i.series})" data-k="${items.indexOf(i)}"><b>${i.time}</b>${esc(short(i.title))}</button>`}
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const short=t=>t.replace(/^TAHMİN ET! /,"");
 function render(){
@@ -97,11 +100,11 @@ function render(){
   const ay=items.filter(i=>{const d=new Date(i.date);return d.getMonth()===cur.getMonth()&&d.getFullYear()===cur.getFullYear()});
   let l="",last="";
   for(const i of ay){if(i.date!==last){last=i.date;const d=new Date(i.date+"T12:00:00");l+=`<div class="dh">${d.getDate()} ${AYLAR[d.getMonth()]} ${GUN[(d.getDay()+6)%7]}</div>`}
-    l+=`<div class="item" style="--c:var(--${i.series})" data-k="${items.indexOf(i)}"><div class="m">${i.time} • ${ADLAR[i.series]} • ${done(i)?"Yayında":"Planlı"}</div><div class="t">${esc(i.title)}</div></div>`}
+    l+=`<div class="item" style="--c:var(--${i.series})" data-k="${items.indexOf(i)}"><div class="m">${i.time} • ${ADLAR[i.series]} • ${dur(i)}</div><div class="t">${esc(i.title)}</div></div>`}
   $("#list").innerHTML=l||'<div class="sub">Bu ay için planlı gönderi yok.</div>';
 }
 function ac(k){const i=items[k];
-  $("#sheet").innerHTML=`<div class="sub" style="color:var(--${i.series})">${ADLAR[i.series]} • ${i.date.split("-").reverse().join(".")} ${i.time} • ${done(i)?"Yayında":"Planlı"}</div><h3>${esc(i.title)}</h3>${i.caption?`<pre id="cp">${esc(i.caption)}</pre>`:'<div class="sub" style="margin:12px 0">Açıklama kayıtlı değil.</div>'}<div class="row">${i.caption?'<button id="kop">Açıklamayı kopyala</button>':""}<button id="kapa">Kapat</button></div>`;
+  $("#sheet").innerHTML=`<div class="sub" style="color:var(--${i.series})">${ADLAR[i.series]} • ${i.date.split("-").reverse().join(".")} ${i.time} • ${dur(i)}</div><h3>${esc(i.title)}</h3>${i.caption?`<pre id="cp">${esc(i.caption)}</pre>`:'<div class="sub" style="margin:12px 0">Açıklama kayıtlı değil.</div>'}<div class="row">${i.caption?'<button id="kop">Açıklamayı kopyala</button>':""}<button id="kapa">Kapat</button></div>`;
   $("#modal").classList.add("open");
   $("#kapa").onclick=()=>$("#modal").classList.remove("open");
   const b=$("#kop");if(b)b.onclick=async()=>{try{await navigator.clipboard.writeText(i.caption);b.textContent="Kopyalandı"}catch{const r=document.createRange();r.selectNodeContents($("#cp"));getSelection().removeAllRanges();getSelection().addRange(r);b.textContent="Seçildi, kopyala"}}}
