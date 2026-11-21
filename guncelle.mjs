@@ -4,7 +4,7 @@
 import fs from "node:fs";
 const UP = "C:/Users/USER/Desktop/insta video denemesi/_yukleme";
 const VS = "C:/Users/USER/Desktop/video-studio";
-const META_SON = "2026-11-24";
+const META_SON = "2026-11-27";
 const BASLA = new Date("2026-11-20T12:00:00+03:00");
 const j = (p) => JSON.parse(fs.readFileSync(p, "utf8"));
 const oku = (ad) => { try { return fs.readFileSync(`${UP}/${ad}.txt`, "utf8").trim(); } catch { return ""; } };
